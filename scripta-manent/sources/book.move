@@ -62,7 +62,7 @@ module account::book {
     #[view]
     public fun get_book_chapter(addr: address, chapter_index: u64): String acquires Book {
         let book = borrow_global<Book>(addr);
-        let chapter = &book.chapters[chapter_index as usize];
+        let chapter = &book.chapters[chapter_index];
         chapter.title
     }
 
@@ -70,8 +70,8 @@ module account::book {
     #[view]
     public fun get_book_page(addr: address, chapter_index: u64, page_index: u64): String acquires Book {
         let book = borrow_global<Book>(addr);
-        let chapter = &book.chapters[chapter_index as usize];
-        let page = &chapter.pages[page_index as usize];
+        let chapter = &book.chapters[chapter_index];
+        let page = &chapter.pages[page_index];
         page.content
     }
 
@@ -81,8 +81,8 @@ module account::book {
     public entry fun register_author(account: &signer) acquires Author {
         let signer_address = signer::address_of(account);
         if (exists<Author>(signer_address)) {
-            abort EAuthor_already_exists;
-        }
+            abort EAuthor_already_exists
+        };
         // Create a new Author resource
         let author = Author {
             last_name: String::empty(),
@@ -96,48 +96,48 @@ module account::book {
     public entry fun update_author(account: &signer, last_name: String, first_name: String, alias: String) acquires Author {
         let signer_address = signer::address_of(account);
         if (!exists<Author>(signer_address)) {
-            abort EAuthor_not_found;
-        }
+            abort EAuthor_not_found
+        };
 
         let author = borrow_global_mut<Author>(signer_address);
         if (author.alias == alias) {
-            abort EAlias_already_exists;
-        }
+            abort EAlias_already_exists
+        };
         author.last_name = last_name;
         author.first_name = first_name;
         author.alias = alias;
     }
 
-    public entry fun delete_author(account: &signer, ) acquires Author {
+    public entry fun delete_author(account: &signer) acquires Author {
         let signer_address = signer::address_of(account);
         if (!exists<Author>(signer_address)) {
-            abort EAuthor_not_found;
-        }
+            abort EAuthor_not_found
+        };
         move_from<Author>(signer_address);
     }
 
 
 
     // Functions for Book
-    public entry fun new_book(account: &signer) acquires BookCollection {
+    public entry fun new_book(account: &signer, title: String) acquires BookCollection {
         let signer_address = signer::address_of(account);
 
         // Ensure the author has a BookCollection resource
         if (!exists<BookCollection>(signer_address)) {
             // Initialize an empty BookCollection for the author if it doesn't exist
             let book_collection = BookCollection { books: Vector::empty() };
-            move_to(account, book_collection);
-        }
+            move_to(account, book_collection)
+        };
 
         let book_collection = borrow_global_mut<BookCollection>(signer_address);
 
         // Check if a book with the same name already exists in the author's collection
         let books = &mut book_collection.books;
-        let mut index: u64 = 0;
+        let mut index = 0u64;
         let len = Vector::length(books);
         while (index < len) {
             let existing_book = Vector::borrow(books, index);
-            if (existing_book.title == book_title) {
+            if (existing_book.title == title) {
                 abort EBook_already_exists;
             }
             index = index + 1;
@@ -145,7 +145,7 @@ module account::book {
 
         // If no book with the same name exists, create and add the new book
         let new_book = Book {
-            title: book_title,
+            title: title,
             author: Author {
                 last_name: String::empty(),
                 first_name: String::empty(),
@@ -201,11 +201,11 @@ module account::book {
         let book_collection_ref = borrow_global_mut<BookCollection>(signer_address);
 
         // Find the index of the book with the given title
-        let mut index_to_remove: u64 = 0;
+        let mut index_to_remove = 0u64;
         let mut found = false;
         let len = Vector::length(&book_collection_ref.books);
         while (index_to_remove < len) {
-            if (Vector::borrow(&book_collection_ref.books, index_to_remove).name == title) {
+            if (Vector::borrow(&book_collection_ref.books, index_to_remove).title == title) {
                 found = true;
                 break;
             }
