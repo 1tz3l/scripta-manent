@@ -275,12 +275,63 @@ module account::book {
 
 
     // Functions for Page
-    public entry fun new_book_page(account: &signer, content: String) acquires Page {
+    public entry fun new_book_page(account: &signer, book_collection_address: address, book_index: u64, chapter_index: u64, page_index: u64, content: String) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address, ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
+
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        assert!(Vector::length(&book.chapters) > chapter_index, EChapter_not_found);
+
+        let chapter = Vector::borrow_mut(&mut book.chapters, chapter_index);
+        // Check if the page_index is valid before inserting a new page
+        assert!(Vector::length(&chapter.pages) >= page_index, EPage_not_found);
+
+        let new_page = Page {
+            content: content,
+        };
+        // Insert the new page at the specified index
+        Vector::insert(&mut chapter.pages, page_index, new_page);
     }
 
-    public entry fun update_book_page(account: &signer, title: String, chapter_index: u64, page_index: u64, new_content: String) {
+    public entry fun update_book_page(account: &signer, book_collection_address: address, book_index: u64, chapter_index: u64, page_index: u64, new_content: String) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address, ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
+
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        assert!(Vector::length(&book.chapters) > chapter_index, EChapter_not_found);
+
+        let chapter = Vector::borrow_mut(&mut book.chapters, chapter_index);
+        assert!(Vector::length(&chapter.pages) > page_index, EPage_not_found);
+
+        let page = Vector::borrow_mut(&mut chapter.pages, page_index);
+        if (page.content == new_content) {
+            abort ENo_changes_made;
+        }
+        page.content = new_content;
     }
 
-    public entry fun delete_book_page(account: &signer, title: String, chapter_index: u64, page_index: u64) {
+    public entry fun delete_book_page(account: &signer, book_collection_address: address, book_index: u64, chapter_index: u64, page_index: u64) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address, ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
+
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        assert!(Vector::length(&book.chapters) > chapter_index, EChapter_not_found);
+
+        let chapter = Vector::borrow_mut(&mut book.chapters, chapter_index);
+        assert!(Vector::length(&chapter.pages) > page_index, EPage_not_found);
+
+        Vector::remove(&mut chapter.pages, page_index);
     }
 }
