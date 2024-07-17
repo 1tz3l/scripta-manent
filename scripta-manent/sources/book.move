@@ -223,13 +223,53 @@ module account::book {
 
     
     // Functions for Chapter
-    public entry fun new_book_chapter(account: &signer, title: String) acquires Chapter {
+    public entry fun new_book_chapter(account: &signer, book_collection_address: address, book_index: u64, title: String) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address, ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
+
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        let new_chapter = Chapter {
+            title: title,
+            pages: Vector::empty(),
+        };
+        Vector::push_back(&mut book.chapters, new_chapter);
+      }
+
+
+    public entry fun update_book_chapter(account: &signer, book_collection_address: address, book_index: u64, chapter_index: u64, new_title: String) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address, ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
+
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        assert!(Vector::length(&book.chapters) > chapter_index, EChapter_not_found);
+
+        let chapter = Vector::borrow_mut(&mut book.chapters, chapter_index);
+        if (chapter.title == new_title) {
+            abort ENo_changes_made;
+        }
+        chapter.title = new_title;
     }
 
-    public entry fun update_book_chapter(account: &signer, title: String, chapter_index: u64, new_title: String) {
-    }
+    public entry fun delete_book_chapter(account: &signer, book_collection_address: address, book_index: u64, chapter_index: u64) acquires BookCollection {
+        let signer_address = signer::address_of(account);
+        assert!(signer_address == book_collection_address,  ENot_authorized);
+        assert!(exists<BookCollection>(book_collection_address), EBookCollection_not_found);
 
-    public entry fun delete_book_chapter(account: &signer, title: String, chapter_index: u64) {
+        let book_collection = borrow_global_mut<BookCollection>(book_collection_address);
+        assert!(Vector::length(&book_collection.books) > book_index, EBook_not_found);
+
+        let book = Vector::borrow_mut(&mut book_collection.books, book_index);
+        assert!(Vector::length(&book.chapters) > chapter_index, EChapter_not_found);
+
+        Vector::remove(&mut book.chapters, chapter_index);
     }
 
 
