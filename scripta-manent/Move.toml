@@ -3,7 +3,7 @@ name = "Book"
 version = "0.0.0"
 
 [addresses]
-account = "_"
+account = "0xb9cf9318652e889c0a01bf6906a7bfa021e0f45818f53c21e57c01c81878b3ac"
 
 [dependencies.AptosStdlib]
 git = 'https://github.com/aptos-labs/aptos-core.git'
