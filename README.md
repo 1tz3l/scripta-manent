@@ -156,13 +156,13 @@ Test result: OK. Total tests: 0; passed: 0; failed: 0
 ```
 
 > :information_source: No te preocupes si te llega a salir una advertencia (warning) como esta:
->```sh
+```
 warning[W09001]: unused alias
   ┌─
   │
 2 │     use std::string::{Self, String, utf8};
   │              ^^^^^^ Unused 'use' of alias 'string'. Consider removing it
->```
+```
 
 Y de esta forma se ejecuta un módulo Move.
 
