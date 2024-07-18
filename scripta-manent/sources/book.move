@@ -1,5 +1,5 @@
 module account::book {
-    use std::string::String;
+    use std::string::{Self, String, utf8};
     use std::vector::Self;
     use std::signer;
 
@@ -21,6 +21,9 @@ module account::book {
 
 
     // Structs
+
+    struct Counter has key { incrementer: u64 }
+
     struct Author has key, copy, drop, store {
         last_name: String,
         first_name: String,
@@ -79,16 +82,16 @@ module account::book {
 
 
     // Functions for Author
-    public entry fun register_author(account: &signer) acquires Author {
+    public entry fun register_author(account: &signer, last_name: String, first_name: String, alias: String) acquires Author {
         let signer_address = signer::address_of(account);
         if (exists<Author>(signer_address)) {
             abort EAuthor_already_exists
         };
         // Create a new Author resource
         let author = Author {
-            last_name: String,
-            first_name: String,
-            alias: String,
+            last_name: last_name,
+            first_name: first_name,
+            alias: alias,
         };
         // Store the Author resource under the signer's account
         move_to(account, author);
@@ -119,6 +122,27 @@ module account::book {
 
 
 
+    // Counter function
+    fun new_counter(account: &signer) acquires Counter {
+        move_to(account, Counter { incrementer: 0 });
+    }
+
+    fun increment_counter(account: &signer) acquires Counter {
+        let counter = &mut borrow_global_mut<Counter>(account).incrementer;
+        *counter = *counter + 1;
+    }
+
+    fun decrement_counter(account: &signer) acquires Counter {
+        let counter = &mut borrow_global_mut<Counter>(account).incrementer;
+        *counter = *counter - 1;
+    }
+
+    fun get_counter(account: &signer): u64 acquires Counter {
+        *borrow_global<Counter>(account).incrementer
+    }
+
+
+
     // Functions for Book
     public entry fun new_book(account: &signer, title: String) acquires BookCollection {
         let signer_address = signer::address_of(account);
@@ -133,25 +157,27 @@ module account::book {
         let book_collection = borrow_global_mut<BookCollection>(signer_address);
 
         // Check if a book with the same name already exists in the author's collection
+        new_counter(account);
+        let index = borrow_global<Counter>(account).incrementer;
         let books = &mut book_collection.books;
-        let index = 0u64;
         let len = vector::length(books);
+
         loop {
-            if (index >= len) { break };
-            let existing_book = vector::borrow(books, index);
+            if (get_counter(&index) >= len) { break };
+            let existing_book = vector::borrow(books, get_counter(&index));
             if (existing_book.title == title) {
                 abort EBook_already_exists;
             };
-            index = index + 1;
+            increment_counter(&mut index);
         };
 
         // If no book with the same name exists, create and add the new book
         let new_book = Book {
             title: title,
             author: Author {
-                last_name: String::empty(),
-                first_name: String::empty(),
-                alias: String::empty(),
+                last_name: utf8(b""),
+                first_name: utf8(b""),
+                alias: utf8(b""),
             },
             chapters: vector::empty(),
         };
@@ -169,6 +195,8 @@ module account::book {
         let book_collection_ref = borrow_global_mut<BookCollection>(signer_address);
 
         // Find the book with the old_title and update its title to new_title
+        new_counter(account);
+        let index = borrow_global<Counter>(account).incrementer;
         let books =  &mut book_collection_ref.books;
         let len = vector::length(books);
         let found = false;
@@ -177,13 +205,13 @@ module account::book {
             if (book.title == old_title) {
                 // Check if the new title is the same as the old title
                 if (book.title == new_title) {
-                    abort ENo_changes_made;
+                    abort ENo_changes_made
                 };
                 book.title = new_title;
                 found = true;
-                break
+                break;
             };
-            index = index + 1;
+            increment_counter(&mut index);
         };
         
         // If the book with the old_title was not found, abort the transaction
@@ -203,15 +231,17 @@ module account::book {
         let book_collection_ref = borrow_global_mut<BookCollection>(signer_address);
 
         // Find the index of the book with the given title
-        let index_to_remove = 0u64;
-        let found = false;
+        decrement_counter(account);
+        let index_to_remove = borrow_global<Counter>(account).incrementer;
         let len = vector::length(&book_collection_ref.books);
+        let found = false;
+        
         while (index_to_remove < len) {
             if (vector::borrow(&book_collection_ref.books, index_to_remove).title == title) {
                 found = true;
                 break
             };
-            index_to_remove = index_to_remove + 1;
+            decrement_counter(&mut index_to_remove);
         };
 
         // If the book is found, remove it from the collection
