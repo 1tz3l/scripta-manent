@@ -82,7 +82,7 @@ module account::book {
 
 
     // Functions for Author
-    public entry fun register_author(account: &signer, last_name: String, first_name: String, alias: String) acquires Author {
+    public entry fun register_author(account: &signer, last_name: String, first_name: String, alias: String) {
         let signer_address = signer::address_of(account);
         if (exists<Author>(signer_address)) {
             abort EAuthor_already_exists
@@ -123,7 +123,7 @@ module account::book {
 
 
     // Counter function
-    fun new_counter(account: &signer) acquires Counter {
+    fun new_counter(account: &signer) {
         move_to(account, Counter { incrementer: 0 });
     }
 
@@ -147,7 +147,7 @@ module account::book {
 
 
     // Functions for Book
-    public entry fun new_book(account: &signer, title: String) acquires BookCollection {
+    public entry fun new_book(account: &signer, title: String) acquires BookCollection, Counter {
         let signer_address = signer::address_of(account);
 
         // Ensure the author has a BookCollection resource
@@ -161,7 +161,7 @@ module account::book {
 
         // Check if a book with the same name already exists in the author's collection
         new_counter(account);
-        let index = borrow_global<Counter>(signer_address).incrementer;
+        let _index = borrow_global<Counter>(signer_address).incrementer;
         let books = &mut book_collection.books;
         let len = vector::length(books);
 
@@ -170,7 +170,7 @@ module account::book {
             if (counter_value >= len) { break };
             let existing_book = vector::borrow(books, counter_value);
             if (existing_book.title == title) {
-                abort EBook_already_exists;
+                abort EBook_already_exists
             };
             increment_counter(account);
         };
@@ -189,7 +189,7 @@ module account::book {
     }
 
 
-    public entry fun update_book(account: &signer, old_title: String, new_title: String) acquires BookCollection {
+    public entry fun update_book(account: &signer, old_title: String, new_title: String) acquires BookCollection, Counter {
         let signer_address = signer::address_of(account);
 
         // Check if the BookCollection exists
@@ -214,19 +214,19 @@ module account::book {
                 };
                 book_ref.title = new_title;
                 found = true;
-                break;
+                break
             };
-            increment_counter(&mut index);
+            increment_counter(account);
         };
         
         // If the book with the old_title was not found, abort the transaction
         if (!found) {
-            abort EBook_not_found;
-        }
+            abort EBook_not_found
+        };
     }
     
 
-    public entry fun delete_book(account: &signer, title: String) acquires BookCollection {
+    public entry fun delete_book(account: &signer, title: String) acquires BookCollection, Counter {
         let signer_address = signer::address_of(account);
 
         // Check if the BookCollection exists
@@ -246,15 +246,15 @@ module account::book {
                 found = true;
                 break
             };
-            decrement_counter(&mut index_to_remove);
+            decrement_counter(account);
         };
 
         // If the book is found, remove it from the collection
         if (found) {
             vector::remove(&mut book_collection_ref.books, index_to_remove);
         } else {
-            abort EBook_not_found;
-        }
+            abort EBook_not_found
+        };
     }
 
 
