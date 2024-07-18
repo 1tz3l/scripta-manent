@@ -22,7 +22,7 @@ module account::book {
 
     // Structs
 
-    struct Counter has key { incrementer: u64 }
+    struct Counter has key, copy { incrementer: u64 }
 
     struct Author has key, copy, drop, store {
         last_name: String,
@@ -127,21 +127,21 @@ module account::book {
         move_to(account, Counter { incrementer: 0 });
     }
 
+    fun get_counter(account: &signer): u64 acquires Counter {
+        let signer_address = signer::address_of(account);
+        borrow_global<Counter>(signer_address).incrementer
+    }
+
     fun increment_counter(account: &signer) acquires Counter {
         let signer_address = signer::address_of(account);
-        let counter = &mut borrow_global_mut<Counter>(signer_address).incrementer;
-        *counter = *counter + 1;
+        let counter_ref = &mut borrow_global_mut<Counter>(signer_address).incrementer;
+        *counter_ref = *counter_ref + 1;
     }
 
     fun decrement_counter(account: &signer) acquires Counter {
         let signer_address = signer::address_of(account);
-        let counter = &mut borrow_global_mut<Counter>(signer_address).incrementer;
-        *counter = *counter - 1;
-    }
-
-    fun get_counter(account: &signer): u64 acquires Counter {
-        let signer_address = signer::address_of(account);
-        &borrow_global<Counter>(signer_address).incrementer
+        let counter_ref = &mut borrow_global_mut<Counter>(signer_address).incrementer;
+        *counter_ref = *counter_ref - 1;
     }
 
 
@@ -166,12 +166,13 @@ module account::book {
         let len = vector::length(books);
 
         loop {
-            if (get_counter(&index) >= len) { break };
-            let existing_book = vector::borrow(books, get_counter(&index));
+            let counter_value = get_counter(account);
+            if (counter_value >= len) { break };
+            let existing_book = vector::borrow(books, counter_value);
             if (existing_book.title == title) {
                 abort EBook_already_exists;
             };
-            increment_counter(&mut index);
+            increment_counter(account);
         };
 
         // If no book with the same name exists, create and add the new book
